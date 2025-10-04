@@ -1,4 +1,3 @@
-
 # Dobby Zork
 Dobby Zork is a modern reimagining of the classic Zork adventure game, powered by the Dobby LLM model (Fireworks API). Instead of relying on pre-written text, it dynamically generates unique storylines, puzzles, and interactions for each player, creating a personalized adventure every time. The LLM not only crafts the narrative and dialogue but also verifies the player’s actions and decisions, ensuring they make logical sense within the game world. This blend of AI storytelling and interactive gameplay makes Dobby Zork a living, evolving version of Zork where no two journeys through the digital underground are ever the same.
 ## DEMO
@@ -125,3 +124,5 @@ Creates `dobby-zork.zip` containing `src/`, `public/`, `package.json`, `wrangler
 
 ## 🧩 TODO
 - [ ]  🌍 Add multi-language support
+- [ ]  🌍 Add how to play guide
+- [ ]  🌍 better hint system
