@@ -122,3 +122,6 @@ Creates `dobby-zork.zip` containing `src/`, `public/`, `package.json`, `wrangler
 
 - `npm run test:new` → simulates `POST /api/new` and asserts shape
 - `npm run test:act` → simulates `POST /api/act` and asserts shape
+
+## 🧩 TODO
+- [ ]  🌍 Add multi-language support
