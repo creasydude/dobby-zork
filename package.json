@@ -1,0 +1,14 @@
+{
+  "name": "dobby-zork",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev src/worker/index.mjs --local",
+    "test:new": "node scripts/test-new.mjs",
+    "test:act": "node scripts/test-act.mjs",
+    "zip": "powershell -ExecutionPolicy Bypass -File scripts/build-zip.ps1"
+  },
+  "devDependencies": {
+  }
+}
