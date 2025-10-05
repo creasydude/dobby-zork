@@ -67,12 +67,13 @@ export async function handleNew(req, env) {
   let meta = model?.metadata || {};
   // Ensure meta fields are translated as requested (goal, difficulty, items)
   try {
-    const { system: ms, user: mu } = TRANSLATE_META_PROMPT({ goal: meta?.goal || "", difficulty: meta?.difficulty || "", items: meta?.items || [] }, lang);
+    const { system: ms, user: mu } = TRANSLATE_META_PROMPT({ goal: meta?.goal || "", difficulty: meta?.difficulty || "", stage: meta?.stage || "", items: meta?.items || [] }, lang);
     const tm = await callLLM({ system: ms, user: mu }, env);
     const mjson = tm?.json || {};
     if (mjson) {
       meta.goal = String(mjson.goal || meta.goal || "");
       meta.difficulty = String(mjson.difficulty || meta.difficulty || "");
+      meta.stage = String(mjson.stage || meta.stage || "");
       if (Array.isArray(mjson.items)) meta.items = mjson.items.map(String);
     }
   } catch {}
@@ -197,12 +198,32 @@ export async function handleTranslate(req, env) {
   const { json: model } = await callLLM({ system, user }, env);
   const translated = String(model?.text || snapshot.lastScene || "");
   snapshot.lastScene = translated;
+  // Also translate metadata (goal, difficulty, stage) and inventory item names
+  try {
+    const { system: ms, user: mu } = TRANSLATE_META_PROMPT({
+      goal: snapshot.metadata?.goal || "",
+      difficulty: snapshot.metadata?.difficulty || "",
+      stage: snapshot.metadata?.stage || "",
+      items: snapshot.inventory || [],
+    }, lang);
+    const tmeta = await callLLM({ system: ms, user: mu }, env);
+    const mj = tmeta?.json || {};
+    if (mj) {
+      snapshot.metadata = {
+        ...(snapshot.metadata || {}),
+        goal: String(mj.goal || snapshot.metadata?.goal || ""),
+        difficulty: String(mj.difficulty || snapshot.metadata?.difficulty || ""),
+        stage: String(mj.stage || snapshot.metadata?.stage || ""),
+      };
+      if (Array.isArray(mj.items)) snapshot.inventory = mj.items.map(String).slice(0, 6);
+    }
+  } catch {}
   snapshot.metadata = { ...(snapshot.metadata || {}), language: lang };
   snapshot.updatedAt = new Date().toISOString();
   store.set(sessionId, snapshot);
   const kv = await getKV(env);
   if (kv) await kv.put(sessionId, JSON.stringify(snapshot));
-  return json(200, { ok: true, scene: { text: translated }, metadata: snapshot.metadata });
+  return json(200, { ok: true, scene: { text: translated }, metadata: snapshot.metadata, inventory: snapshot.inventory });
 }
 
 export async function handleSessionGet(req, env, id) {

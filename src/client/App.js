@@ -105,7 +105,12 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/translate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: session.sessionId, lang: language }) });
       const data = await res.json();
       if (data?.scene?.text) {
-        const next = { ...session, lastScene: data.scene.text, metadata: { ...(session.metadata||{}), language: language } };
+        const next = {
+          ...session,
+          lastScene: data.scene.text,
+          metadata: { ...(session.metadata||{}), language: language, goal: data?.metadata?.goal || session?.metadata?.goal, difficulty: data?.metadata?.difficulty || session?.metadata?.difficulty, stage: data?.metadata?.stage || session?.metadata?.stage },
+          inventory: Array.isArray(data?.inventory) ? data.inventory : (session?.inventory || [])
+        };
         setSession(next); saveLocal(next);
       }
     } finally { setLoading(false); }
