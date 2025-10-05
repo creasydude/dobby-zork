@@ -69,10 +69,11 @@ export function TRANSLATE_PROMPT(text, lang = "en") {
 }
 
 export function TRANSLATE_META_PROMPT(meta, lang = "en") {
-  const system = `SYSTEM: You are a translator. RETURN ONLY valid JSON with this exact schema: { "goal": "string", "difficulty": "string", "items": ["string", ...] }. Translate values to the target language; keep JSON keys in English.`;
+  const system = `SYSTEM: You are a translator. RETURN ONLY valid JSON with this exact schema: { "goal": "string", "difficulty": "string", "stage": "string", "items": ["string", ...] }. Translate values to the target language; keep JSON keys in English.`;
   const safe = {
     goal: String(meta?.goal || ""),
     difficulty: String(meta?.difficulty || ""),
+    stage: String(meta?.stage || ""),
     items: Array.isArray(meta?.items) ? meta.items.map(String) : [],
   };
   const user = `Translate these values to ${langName(lang)}: ${JSON.stringify(safe)}`;
