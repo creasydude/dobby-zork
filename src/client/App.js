@@ -4,6 +4,7 @@ import { Typewriter } from "./components/Typewriter.js";
 import { InputBar } from "./components/InputBar.js";
 import { SessionControls } from "./components/SessionControls.js";
 import { Loading } from "./components/Loading.js";
+import { HowToPlay } from "./components/HowToPlay.js";
 import { LoadingBar } from "./components/LoadingBar.js";
 
 const API_BASE = window.API_BASE || "";
@@ -48,6 +49,7 @@ export default function App() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -100,8 +102,11 @@ export default function App() {
 
   return (
     React.createElement("div", { className: "app" },
-      React.createElement("header", null,
-        React.createElement("div", { className: "logo" }, "DOBBY ZORK ", React.createElement("span", { className: "cursor" }))
+      React.createElement("header", { className: "header" },
+        React.createElement("div", { className: "logo" }, "DOBBY ZORK ", React.createElement("span", { className: "cursor" })),
+        React.createElement("div", { className: "header-actions" },
+          React.createElement("button", { className: "link", onClick: () => setShowGuide(true) }, "How to Play")
+        )
       ),
       React.createElement(PixelWindow, {
         title: "Story",
@@ -144,7 +149,8 @@ export default function App() {
       ),
       React.createElement("footer", null,
         React.createElement("small", null, offline ? "Offline demo mode" : "LLM-driven interactive fiction")
-      )
+      ),
+      React.createElement(HowToPlay, { open: showGuide, onClose: () => setShowGuide(false) })
     )
   );
 }
