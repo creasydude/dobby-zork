@@ -11,11 +11,11 @@ GEMINI_API_KEY = "your_api_key_here"
 workers_dev = true
 [[env.preview.kv_namespaces]]
 binding = "SESSIONS_KV"
-preview_id = "a95d7baaf0af4e3586e303c316076dc1"
+preview_id = "..."
 
 [env.production]
 # Set a route if deploying to a zone (optional). Without routes, publish to workers.dev.
 # routes = ["https://yourdomain.example/api/*"]
 [[env.production.kv_namespaces]]
 binding = "SESSIONS_KV"
-id = "a95d7baaf0af4e3586e303c316076dc1"
+id = "..."
