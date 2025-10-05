@@ -1,6 +1,11 @@
 // Prompt templates for INIT and JUDGE stages
 
-export function INIT_PROMPT(seed) {
+function langName(code) {
+  const map = { en: "English", es: "Spanish", fr: "French", de: "German", tr: "Turkish", it: "Italian", pt: "Portuguese", ja: "Japanese", zh: "Chinese", ar: "Arabic", ru: "Russian", fa: "Persian" };
+  return map[String(code || "").toLowerCase()] || "English";
+}
+
+export function INIT_PROMPT(seed, lang = "en") {
   const system = `SYSTEM: You are "GameMaster", a retro-text-adventure generator for a browser game. RETURN ONLY valid JSON (no markdown fences, no commentary). Use EXACT keys below.
   Schema:
   {
@@ -15,9 +20,10 @@ export function INIT_PROMPT(seed) {
     }
   }
   INSTRUCTIONS: Produce a rich evocative opening scene (4-6 sentences), describe setting and a clear immediate challenge.
-  Keep each sentence short. Fill "story_guidelines" to guide consistency in later steps.`;
+  Keep each sentence short. Fill "story_guidelines" to guide consistency in later steps.
+  LANGUAGE: All strings returned to the player (scene, goal, feedback, hints) must be in ${langName(lang)}. Also ensure metadata fields \"goal\", \"difficulty\" (label), and item names in \"items\" are in ${langName(lang)}. Keep JSON keys in English.`;
 
-  const user = `Use this seed: ${seed}. Return JSON per the schema above.`;
+  const user = `Use this seed: ${seed}. Return JSON per the schema above. Language code: ${String(lang).toLowerCase()}.`;
   return { system, user };
 }
 
@@ -38,7 +44,8 @@ export function JUDGE_PROMPT(history, lastScene, userInput, storyGuidelines, inv
   RULES: Base evaluation on whether the player's input tries to solve or progress the current challenge. If partially
   correct, set is_success=false but include a helpful hint. If input is malicious or unrelated, set is_success=false and
   give a short hint to redirect to the game. Do not return any markup. Keep next_scene short and actionable.
-  IMPORTANT: Use the exact key name next_scene (not next_scene_text).`;
+  IMPORTANT: Use the exact key name next_scene (not next_scene_text).
+  LANGUAGE: All strings visible to the player (next_scene, feedback, hints) must be in ${langName(metadata?.language || "en")}. Interpret userInput in that language.`;
 
   const safe = {
     history: history.map((h) => ({ turn: h.turn, input: h.input, outcome: h.is_success })),
@@ -51,6 +58,23 @@ export function JUDGE_PROMPT(history, lastScene, userInput, storyGuidelines, inv
     metadata,
   };
 
-  const user = `Evaluate this context and return JSON per the schema above: ${JSON.stringify(safe)}`;
+  const user = `Evaluate this context and return JSON per the schema above. Language code: ${String(metadata?.language || "en").toLowerCase()}. Context: ${JSON.stringify(safe)}`;
+  return { system, user };
+}
+
+export function TRANSLATE_PROMPT(text, lang = "en") {
+  const system = `SYSTEM: You are a translator specialized in interactive fiction. RETURN ONLY valid JSON with the exact schema: { "text": "translated string" }. No commentary, no markdown.`;
+  const user = `Translate the following text to ${langName(lang)}. Preserve meaning and tone. Keep formatting (line breaks) similar. Input: ${JSON.stringify(String(text || ""))}`;
+  return { system, user };
+}
+
+export function TRANSLATE_META_PROMPT(meta, lang = "en") {
+  const system = `SYSTEM: You are a translator. RETURN ONLY valid JSON with this exact schema: { "goal": "string", "difficulty": "string", "items": ["string", ...] }. Translate values to the target language; keep JSON keys in English.`;
+  const safe = {
+    goal: String(meta?.goal || ""),
+    difficulty: String(meta?.difficulty || ""),
+    items: Array.isArray(meta?.items) ? meta.items.map(String) : [],
+  };
+  const user = `Translate these values to ${langName(lang)}: ${JSON.stringify(safe)}`;
   return { system, user };
 }

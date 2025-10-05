@@ -50,6 +50,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [offline, setOffline] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [lang, setLang] = useState((loadLocal()?.metadata?.language) || (localStorage.getItem('dobby-zork-lang') || 'en'));
 
   useEffect(() => {
     (async () => {
@@ -57,7 +58,7 @@ export default function App() {
         let snap = loadLocal();
         if (!snap || !snap.sessionId) {
           setLoading(true);
-          const s = await apiNew();
+          const s = await apiNewWithLang(lang);
           snap = { sessionId: s.sessionId, score: 0, history: [], lastScene: s.scene?.text || "", inventory: [], metadata: s.metadata || {} };
         } else {
           const s = await apiGet(snap.sessionId);
@@ -74,6 +75,11 @@ export default function App() {
     })();
   }, []);
 
+  async function apiNewWithLang(language) {
+    const res = await fetch(`${API_BASE}/api/new`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ lang: language }) });
+    return res.json();
+  }
+
   async function submit() {
     if (!text.trim() || !session?.sessionId) return;
     setLoading(true);
@@ -82,7 +88,7 @@ export default function App() {
       if (offline || session.sessionId === "offline") {
         res = await OfflineStub().act(text.trim(), session);
       } else {
-        res = await apiAct(session.sessionId, text.trim());
+        res = await apiActWithLang(session.sessionId, text.trim(), lang);
       }
       const event = { turn: (session.history?.length || 0) + 1, input: text.trim() };
       const next = { ...session, lastScene: res.newScene, score: res.score, history: [...(session.history || []), event] };
@@ -90,6 +96,24 @@ export default function App() {
       if (!offline) apiSave(next.sessionId, next).catch(() => {});
       setText("");
     } finally { setLoading(false); }
+  }
+
+  async function translateCurrent(language) {
+    if (!session?.sessionId) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/api/translate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId: session.sessionId, lang: language }) });
+      const data = await res.json();
+      if (data?.scene?.text) {
+        const next = { ...session, lastScene: data.scene.text, metadata: { ...(session.metadata||{}), language: language } };
+        setSession(next); saveLocal(next);
+      }
+    } finally { setLoading(false); }
+  }
+
+  async function apiActWithLang(sessionId, input, language) {
+    const res = await fetch(`${API_BASE}/api/act`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionId, input, lang: language }) });
+    return res.json();
   }
 
   function exportSession() {
@@ -105,6 +129,15 @@ export default function App() {
       React.createElement("header", { className: "header" },
         React.createElement("div", { className: "logo" }, "DOBBY ZORK ", React.createElement("span", { className: "cursor" })),
         React.createElement("div", { className: "header-actions" },
+          React.createElement("span", { className: "lang-picker" },
+            React.createElement("button", { className: `flag ${lang==='en'?'active':''}`, onClick: async () => { setLang('en'); localStorage.setItem('dobby-zork-lang','en'); translateCurrent('en'); } }, "🇬🇧"),
+            React.createElement("button", { className: `flag ${lang==='es'?'active':''}`, onClick: async () => { setLang('es'); localStorage.setItem('dobby-zork-lang','es'); translateCurrent('es'); } }, "🇪🇸"),
+            React.createElement("button", { className: `flag ${lang==='fr'?'active':''}`, onClick: async () => { setLang('fr'); localStorage.setItem('dobby-zork-lang','fr'); translateCurrent('fr'); } }, "🇫🇷"),
+            React.createElement("button", { className: `flag ${lang==='de'?'active':''}`, onClick: async () => { setLang('de'); localStorage.setItem('dobby-zork-lang','de'); translateCurrent('de'); } }, "🇩🇪"),
+            React.createElement("button", { className: `flag ${lang==='tr'?'active':''}`, onClick: async () => { setLang('tr'); localStorage.setItem('dobby-zork-lang','tr'); translateCurrent('tr'); } }, "🇹🇷"),
+            React.createElement("button", { className: `flag ${lang==='ru'?'active':''}`, onClick: async () => { setLang('ru'); localStorage.setItem('dobby-zork-lang','ru'); translateCurrent('ru'); } }, "🇷🇺"),
+            React.createElement("button", { className: `flag ${lang==='fa'?'active':''}`, onClick: async () => { setLang('fa'); localStorage.setItem('dobby-zork-lang','fa'); translateCurrent('fa'); } }, "🇮🇷")
+          ),
           React.createElement("button", { className: "link", onClick: () => setShowGuide(true) }, "How to Play")
         )
       ),
@@ -120,7 +153,7 @@ export default function App() {
           onNewGame: async () => {
             try {
               setLoading(true);
-              const s = await apiNew();
+              const s = await apiNewWithLang(lang);
               const snap = { sessionId: s.sessionId, score: 0, history: [], lastScene: s.scene?.text || "", inventory: [], metadata: s.metadata || {} };
               setSession(snap); saveLocal(snap);
             } catch (e) {

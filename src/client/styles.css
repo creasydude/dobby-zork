@@ -33,6 +33,9 @@ header, footer { padding: 10px 16px; color: var(--muted); }
 .header { display:flex; align-items:center; justify-content: space-between; }
 .header-actions { display:flex; gap:8px; }
 .header .link { background: transparent; color: var(--accent); border: 1px solid #283062; padding: 6px 10px; border-radius: 6px; }
+.lang-picker { display:inline-flex; gap:4px; margin-left: 8px; }
+.flag { background: transparent; border: 1px solid #283062; padding: 4px 8px; border-radius: 6px; font-size: 16px; }
+.flag.active { background: #0a0c17; }
 .grid { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
 .panel { background: var(--panel); border: 4px solid #1f2240; box-shadow: 0 0 0 4px #0a0c17 inset; border-radius: 8px; padding: 16px; }
 .scene-title { color: var(--accent); margin: 0 0 8px; }
@@ -53,6 +56,11 @@ header, footer { padding: 10px 16px; color: var(--muted); }
 input[type=text] { flex: 1; background: #0a0c17; color: var(--text); border: 2px solid #283062; border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 14px; }
 button { background: var(--accent); color: #04110d; border: 0; padding: 10px 12px; border-radius: 6px; font-family: monospace; cursor: pointer; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Improve contrast: ensure text inside .panel and UI is light */
+.panel, .panel * { color: var(--text); }
+.header .link, .flag, .modal .close { color: var(--text); }
+.flag.active { border-color: var(--accent); }
+.header-actions .flag { line-height: 1; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index: 1000; }
 .modal { background: var(--panel); color: var(--text); border: 4px solid #1f2240; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border-radius: 8px; width: min(720px, 92vw); max-height: 80vh; overflow: auto; }
 .modal-header { display:flex; align-items:center; justify-content: space-between; padding: 12px 16px; border-bottom: 2px dashed #2d315b; }

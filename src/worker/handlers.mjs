@@ -1,5 +1,5 @@
 import { callLLM } from "./llm/adapter.mjs";
-import { INIT_PROMPT, JUDGE_PROMPT } from "./llm/promptTemplates.mjs";
+import { INIT_PROMPT, JUDGE_PROMPT, TRANSLATE_PROMPT, TRANSLATE_META_PROMPT } from "./llm/promptTemplates.mjs";
 
 const store = new Map();
 const rate = new Map();
@@ -53,11 +53,29 @@ async function getKV(env) {
 export async function handleNew(req, env) {
   const id = base62(16);
   const seed = base62(8);
-  const { system, user } = INIT_PROMPT(seed);
+  let lang = "en";
+  try {
+    if (req && typeof req.json === "function") {
+      const body = await req.json().catch(() => ({}));
+      if (body && typeof body.lang === "string") lang = body.lang.slice(0, 8).toLowerCase();
+    }
+  } catch {}
+  const { system, user } = INIT_PROMPT(seed, lang);
   const { json: model } = await callLLM({ system, user }, env);
 
-  const openingScene = String(model?.scene || model?.next_scene || model?.next_scene_text || "");
-  const meta = model?.metadata || {};
+  let openingScene = String(model?.scene || model?.next_scene || model?.next_scene_text || "");
+  let meta = model?.metadata || {};
+  // Ensure meta fields are translated as requested (goal, difficulty, items)
+  try {
+    const { system: ms, user: mu } = TRANSLATE_META_PROMPT({ goal: meta?.goal || "", difficulty: meta?.difficulty || "", items: meta?.items || [] }, lang);
+    const tm = await callLLM({ system: ms, user: mu }, env);
+    const mjson = tm?.json || {};
+    if (mjson) {
+      meta.goal = String(mjson.goal || meta.goal || "");
+      meta.difficulty = String(mjson.difficulty || meta.difficulty || "");
+      if (Array.isArray(mjson.items)) meta.items = mjson.items.map(String);
+    }
+  } catch {}
   const guidelines = meta?.story_guidelines || meta?.storyGuidelines || {};
   const stage = String(meta?.stage || "intro");
   const snapshot = {
@@ -74,6 +92,7 @@ export async function handleNew(req, env) {
       difficulty: String(meta?.difficulty || model?.difficulty || "easy"),
       stage,
       story_guidelines: guidelines,
+      language: lang || "en",
     },
   };
 
@@ -89,6 +108,7 @@ export async function handleAct(req, env) {
   const body = await req.json().catch(() => ({}));
   const sessionId = sanitizeInput(body.sessionId || "").slice(0, 64);
   const input = sanitizeInput(body.input || "");
+  const lang = (body && typeof body.lang === "string") ? body.lang.slice(0,8).toLowerCase() : null;
   if (!sessionId || !input) return json(400, { error: "sessionId and input required" });
   if (!throttle(sessionId)) return json(429, { error: "Rate limit" });
 
@@ -101,6 +121,11 @@ export async function handleAct(req, env) {
     }
   }
   if (!snapshot) return json(404, { error: "Session not found" });
+
+  // allow client to switch language mid-session
+  if (lang) {
+    snapshot.metadata = { ...(snapshot.metadata || {}), language: lang };
+  }
 
   const { system, user } = JUDGE_PROMPT(
     snapshot.history || [],
@@ -152,6 +177,32 @@ export async function handleSessionSave(req, env) {
   const kv = await getKV(env);
   if (kv) await kv.put(sessionId, JSON.stringify(snapshot));
   return json(200, { ok: true });
+}
+
+export async function handleTranslate(req, env) {
+  const body = await req.json().catch(() => ({}));
+  const sessionId = sanitizeInput(body.sessionId || "").slice(0, 64);
+  const lang = sanitizeInput(body.lang || "").slice(0, 8).toLowerCase() || "en";
+  if (!sessionId) return json(400, { error: "sessionId required" });
+  let snapshot = store.get(sessionId);
+  if (!snapshot) {
+    const kv = await getKV(env);
+    if (kv) {
+      const raw = await kv.get(sessionId);
+      if (raw) snapshot = JSON.parse(raw);
+    }
+  }
+  if (!snapshot) return json(404, { error: "Session not found" });
+  const { system, user } = TRANSLATE_PROMPT(snapshot.lastScene || "", lang);
+  const { json: model } = await callLLM({ system, user }, env);
+  const translated = String(model?.text || snapshot.lastScene || "");
+  snapshot.lastScene = translated;
+  snapshot.metadata = { ...(snapshot.metadata || {}), language: lang };
+  snapshot.updatedAt = new Date().toISOString();
+  store.set(sessionId, snapshot);
+  const kv = await getKV(env);
+  if (kv) await kv.put(sessionId, JSON.stringify(snapshot));
+  return json(200, { ok: true, scene: { text: translated }, metadata: snapshot.metadata });
 }
 
 export async function handleSessionGet(req, env, id) {

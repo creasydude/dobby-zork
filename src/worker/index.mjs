@@ -1,5 +1,5 @@
 // Cloudflare Worker entry (module syntax)
-import { handleNew, handleAct, handleSessionGet, handleSessionSave, handleDebugAdapter, handleDebugEnv } from "./handlers.mjs";
+import { handleNew, handleAct, handleSessionGet, handleSessionSave, handleTranslate, handleDebugAdapter, handleDebugEnv } from "./handlers.mjs";
 
 function corsHeaders() {
   return {
@@ -28,6 +28,7 @@ export default {
     if (pathname === "/api/new" && req.method === "POST") return handleNew(req, env);
     if (pathname === "/api/act" && req.method === "POST") return handleAct(req, env);
     if (pathname === "/api/session/save" && req.method === "POST") return handleSessionSave(req, env);
+    if (pathname === "/api/translate" && req.method === "POST") return handleTranslate(req, env);
     if (pathname.startsWith("/api/session/") && req.method === "GET") {
       const id = pathname.split("/").pop();
       return handleSessionGet(req, env, id);
